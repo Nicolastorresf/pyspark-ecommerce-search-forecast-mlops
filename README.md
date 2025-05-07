@@ -1,100 +1,164 @@
 # pyspark-ecommerce-search-forecast-mlops
 -->Un proyecto de prueba de concepto que demuestra el análisis de términos de búsqueda de un sitio de comercio electrónico y el uso de un modelo preentrenado de pronóstico de ventas utilizando PySpark. Este repositorio explora elementos básicos de MLOps como el guardado y carga de modelos. <3
 
-# Análisis de Términos de Búsqueda y Pronóstico de Ventas con PySpark (PoC MLOps)
+# Proyecto PySpark: Análisis de Búsquedas y Pronóstico de Ventas con MLOps
 
-Este repositorio contiene un notebook de Jupyter (`Spark_MLOps (1).ipynb`) que demuestra un flujo de trabajo básico de Machine Learning y análisis de datos utilizando PySpark. El proyecto cubre:
-1.  Análisis de un conjunto de datos de términos de búsqueda de un servidor web de comercio electrónico.
-2.  Creación, guardado y carga de un modelo simple de Regresión Lineal con SparkML.
-3.  Carga y uso de un modelo preentrenado de pronóstico de ventas.
+## Descripción General
 
-Este proyecto sirve como una introducción práctica a algunas operaciones fundamentales en el ciclo de vida de MLOps dentro del ecosistema Spark.
+Este repositorio documenta un proyecto realizado con PySpark dentro de un entorno Jupyter Notebook. El objetivo principal es demostrar un flujo de trabajo que incluye el análisis de datos de términos de búsqueda de un sitio de comercio electrónico y la utilización de modelos de Machine Learning (SparkML) para realizar pronósticos. Se exploran conceptos básicos de MLOps como la persistencia (guardado y carga) de modelos y la inferencia con modelos preentrenados.
 
-## Contenido del Notebook (`Spark_MLOps (1).ipynb`)
+El notebook principal es `Spark_MLOps (1).ipynb`.
 
-El notebook está dividido en dos ejercicios principales:
+## Contenido y Flujo del Código del Notebook
 
-### Ejercicio 1: Guardado y Carga de un Modelo SparkML (Regresión Lineal)
+El notebook se divide en varias etapas clave, desde la configuración del entorno hasta el análisis de datos y la aplicación de modelos de Machine Learning.
 
-Este ejercicio ilustra los pasos básicos para construir, entrenar, guardar y cargar un modelo de Machine Learning con SparkML.
+### 1. Configuración del Entorno Spark
+* **Instalación de Dependencias (Celda [1]):**
+    ```python
+    !pip install pyspark
+    !pip install findspark
+    ```
+    Se instalan las bibliotecas `pyspark` y `findspark` para permitir la interacción con Apache Spark desde Python y facilitar la localización de la instalación de Spark.
 
-**Pasos Clave:**
-1.  **Instalación e Importación de Librerías:**
-    * Se instalan `pyspark` y `findspark`.
-    * Se importan las librerías necesarias incluyendo `SparkContext`, `SparkSession`, `VectorAssembler` y `LinearRegression`.
-2.  **Creación de Sesión Spark:** Se inicializa `SparkContext` y `SparkSession`.
-3.  **Creación del DataFrame:** Se utiliza un conjunto de datos de muestra (altura y peso de infantes) para crear un DataFrame de Spark.
-    * `height`: Característica de entrada.
-    * `weight`: Etiqueta a predecir.
-4.  **Preparación de Características:** Se utiliza `VectorAssembler` para transformar la columna `height` en una columna de vector de características (`features`), requerida por los algoritmos de SparkML.
-5.  **Creación y Entrenamiento del Modelo:**
-    * Se crea un modelo de `LinearRegression`.
-    * Se entrena el modelo (`lr.fit()`) utilizando los datos preparados.
-6.  **Guardado del Modelo:** El modelo entrenado (`lrModel`) se guarda en disco utilizando `lrModel.save('infantheight2.model')`. Esto crea un directorio con los metadatos y datos del modelo.
-7.  **Carga del Modelo:** Se carga el modelo previamente guardado utilizando `LinearRegressionModel.load('infantheight2.model')`.
-8.  **Realización de Predicciones:** Se define una función `predict(height)` que toma una altura, la transforma en el formato esperado por el modelo, y utiliza el modelo cargado para predecir el peso. Se prueba con una altura de 70 cm.
-9.  **Ejercicios de Práctica:**
-    * Guardar el modelo con un nuevo nombre (`babyweightprediction.model`).
-    * Cargar el modelo recién guardado.
-    * Predecir el peso para una altura de 50 cm usando el modelo cargado.
+* **Importación e Inicialización (Celda [5]):**
+    ```python
+    import findspark
+    findspark.init()
+    from pyspark import SparkContext, SparkConf
+    from pyspark.sql import SparkSession
+    ```
+    Se inicializa `findspark` y se importan los componentes esenciales de PySpark: `SparkContext` para la funcionalidad central de Spark y `SparkSession` como el punto de entrada para la API de DataFrame y SQL.
 
-**Análisis MLOps (Ejercicio 1):**
-* **Control de Versiones de Modelos (Básico):** El guardado de modelos (`lrModel.save()`) es un primer paso fundamental en MLOps. Permite persistir un estado entrenado del modelo para su uso posterior o para desplegarlo. Nombrar los directorios de los modelos (ej. `infantheight2.model`, `babyweightprediction.model`) puede ser una forma rudimentaria de versionado.
-* **Reutilización de Modelos:** La capacidad de cargar (`LinearRegressionModel.load()`) un modelo previamente guardado es crucial para MLOps, ya que separa el entrenamiento de la inferencia y permite que los modelos se usen en diferentes entornos o momentos.
-* **Reproducibilidad (Parcial):** Al guardar el modelo, se captura el estado aprendido. Sin embargo, para una reproducibilidad completa en MLOps, también se necesitaría versionar el código de entrenamiento, los datos y el entorno.
+* **Creación de la Sesión Spark (Celda [6]):**
+    ```python
+    spark = SparkSession.builder.appName("ECommerceSearchAnalysis").getOrCreate()
+    sc = spark.sparkContext
+    ```
+    Se crea o se obtiene una instancia de `SparkSession` con el nombre de aplicación "ECommerceSearchAnalysis". También se obtiene el `SparkContext` asociado. Se imprimen las versiones para verificación.
 
----
+### 2. Análisis de Términos de Búsqueda
 
-### Ejercicio 2: Análisis de Términos de Búsqueda y Uso de Modelo Preentrenado
+* **Descarga de Datos (Celda [7]):**
+    ```python
+    file_name = "searchterms.csv"
+    url = "https://..." # URL del archivo searchterms.csv
+    !wget -O {file_name} {url}
+    ```
+    Se descarga el conjunto de datos `searchterms.csv` desde una URL pública utilizando el comando `wget`.
 
-Este ejercicio se enfoca en el análisis de datos con Spark SQL/DataFrames y luego en la carga y uso de un modelo de ML preentrenado.
+* **Carga de Datos en DataFrame (Celda [8]):**
+    ```python
+    search_df = spark.read.csv(file_name, header=True, inferSchema=True)
+    search_df.show(5)
+    search_df.printSchema()
+    ```
+    El archivo CSV descargado se carga en un DataFrame de Spark (`search_df`). Se utiliza `header=True` para indicar que la primera fila contiene los nombres de las columnas e `inferSchema=True` para que Spark determine automáticamente los tipos de datos. Se muestra una muestra y el esquema para verificar la carga. El DataFrame resultante contiene las columnas: `day` (integer), `month` (integer), `year` (integer), y `searchterm` (string).
 
-**Pasos Clave:**
-1.  **Descarga del Conjunto de Datos:** Se descarga el archivo `searchterms.csv` que contiene datos de términos de búsqueda.
-2.  **Carga de Datos en DataFrame:** El archivo CSV se carga en un DataFrame de Spark (`search_df`), infiriendo el esquema y utilizando la primera línea como encabezado. Las columnas son `day`, `month`, `year`, y `searchterm`.
-3.  **Análisis Exploratorio Básico:**
-    * Se imprime el número de filas y columnas del DataFrame.
-    * Se muestran las primeras 5 filas.
-    * Se determina el tipo de dato de la columna `searchterm` (resulta ser `StringType`).
-4.  **Consultas Analíticas:**
-    * Se cuenta cuántas veces se buscó el término específico "gaming laptop".
-    * Se identifican y muestran los 5 términos de búsqueda más frecuentes utilizando `groupBy()`, `count()`, `orderBy()`, y `limit()`.
-5.  **Descarga y Extracción de Modelo Preentrenado:**
-    * Se descarga un modelo de pronóstico de ventas preentrenado (`model.tar.gz`).
-    * El archivo `.tar.gz` se extrae, revelando que el modelo real está en una subcarpeta (ej. `sales_prediction.model`).
-6.  **Carga del Modelo Preentrenado:**
-    * Se identifica que el modelo guardado es un `LinearRegressionModel` (y no un `PipelineModel` como se podría haber intentado inicialmente).
-    * Se carga el modelo utilizando `LinearRegressionModel.load()` apuntando a la ruta correcta de los archivos del modelo extraído.
-7.  **Realización de Predicciones con el Modelo Cargado:**
-    * Se prepara un DataFrame de entrada con el año para el cual se desea una predicción (2023).
-    * Dado que es un `LinearRegressionModel`, se utiliza `VectorAssembler` para transformar el año en una columna de características vectoriales (`features`).
-    * Se utiliza el modelo cargado (`sales_model.transform()`) para predecir las ventas.
+* **Exploración Básica del DataFrame (Celdas [9], [10], [11]):**
+    * Se calcula y muestra el número de filas y columnas (10000 filas, 4 columnas).
+    * Se muestran las primeras 5 filas nuevamente.
+    * Se confirma que el tipo de dato de la columna `searchterm` es `StringType`.
 
-**Análisis MLOps (Ejercicio 2):**
-* **Uso de Modelos Preentrenados:** Cargar y utilizar modelos que han sido entrenados y validados previamente es una práctica común en MLOps. Esto ahorra tiempo de reentrenamiento y permite aprovechar modelos bien establecidos.
-* **Gestión de Artefactos del Modelo:** El modelo se descarga como un archivo `.tar.gz`, que es una forma de empaquetar artefactos. La extracción y el apuntar a la ruta correcta del modelo son pasos importantes en el manejo de estos artefactos.
-* **Inferencia del Esquema de Entrada del Modelo:** Un desafío clave al usar modelos preentrenados es entender el esquema de entrada que esperan. En este ejercicio, se infirió que el modelo de regresión lineal probablemente esperaba una característica de año, que luego se vectorizó. En escenarios reales, esta información vendría de la documentación del modelo o del equipo que lo entrenó.
-* **Monitoreo (Implícito):** Aunque no se implementa un monitoreo activo, el acto de cargar un modelo y hacer predicciones es un precursor. En MLOps maduros, se monitorearía el rendimiento del modelo en producción y se reentrenaría según fuera necesario.
-* **Desafíos de Serialización de Modelos:** El error inicial al intentar cargar el modelo como `PipelineModel` cuando en realidad era un `LinearRegressionModel` resalta la importancia de conocer el tipo exacto de objeto que fue serializado (guardado) para poder deserializarlo (cargarlo) correctamente. Los metadatos del modelo son cruciales aquí.
+* **Consultas Analíticas (Celdas [13], [14]):**
+    * **Conteo de Término Específico:** Se cuenta cuántas veces se buscó el término "gaming laptop". El nombre de la columna inferido por Spark fue `searchterm` (minúsculas, sin espacio).
+        ```python
+        from pyspark.sql.functions import col
+        count_gaming_laptop = search_df.filter(col("searchterm") == "gaming laptop").count()
+        # Salida: El término 'gaming laptop' fue buscado 499 veces.
+        ```
+    * **Top 5 Términos Más Frecuentes:** Se identifican los 5 términos de búsqueda más utilizados.
+        ```python
+        from pyspark.sql.functions import desc
+        top_5_search_terms = search_df.groupBy("searchterm").count().orderBy(desc("count")).limit(5)
+        top_5_search_terms.show(truncate=False)
+        # Salida (ejemplo):
+        # +-------------+-----+
+        # |searchterm   |count|
+        # +-------------+-----+
+        # |mobile 6 inch|2312 |
+        # |mobile 5g    |2301 |
+        # |mobile latest|1327 |
+        # |laptop       |935  |
+        # |tablet wifi  |896  |
+        # +-------------+-----+
+        ```
 
-## Cómo Ejecutar el Notebook
+### 3. Uso de un Modelo de Pronóstico de Ventas Preentrenado
+
+* **Descarga y Extracción del Modelo (Celda [15]):**
+    ```python
+    model_file_name = "model.tar.gz"
+    model_url = "https://..." # URL del modelo .tar.gz
+    !wget -O {model_file_name} {model_url}
+    model_dir_name = "sales_forecast_model_dir"
+    !mkdir -p {model_dir_name}
+    !tar -xzf {model_file_name} -C {model_dir_name}
+    ```
+    Se descarga un archivo `model.tar.gz` que contiene un modelo preentrenado y se extrae en el directorio `sales_forecast_model_dir`. La inspección del contenido extraído reveló que el modelo real residía en una subcarpeta llamada `sales_prediction.model`.
+
+* **Carga del Modelo SparkML (Celda [18]):**
+    ```python
+    from pyspark.ml.regression import LinearRegressionModel
+    path_to_model_files = f"{model_dir_name}/sales_prediction.model"
+    sales_model = LinearRegressionModel.load(path_to_model_files)
+    # ... (prints de coeficientes e intercepto)
+    ```
+    Se carga el modelo. Inicialmente se intentó cargar como `PipelineModel`, pero los metadatos indicaron que en realidad era un `LinearRegressionModel`. La carga fue exitosa utilizando la clase correcta.
+
+* **Predicción de Ventas para 2023 (Celda [20]):**
+    ```python
+    from pyspark.ml.feature import VectorAssembler
+    year_to_predict_data = [(2023,)]
+    predict_df_raw = spark.createDataFrame(year_to_predict_data, ["year_feature"])
+    assembler_pred = VectorAssembler(inputCols=["year_feature"], outputCol="features") # Corregido outputCol a "features"
+    predict_df_assembled = assembler_pred.transform(predict_df_raw)
+    # Se seleccionó solo la columna 'features' para la predicción
+    predict_df_final = predict_df_assembled.select("features") 
+    forecast = sales_model.transform(predict_df_final)
+    forecast.select("prediction").show()
+    # Salida:
+    # +------------------+
+    # |        prediction|
+    # +------------------+
+    # |175.16564294006457|
+    # +------------------+
+    ```
+    Se prepara un DataFrame con el año 2023 como característica de entrada. Se utiliza `VectorAssembler` para crear la columna `features` requerida por el `LinearRegressionModel`. Finalmente, se realiza la predicción de ventas.
+
+## Conclusiones del Proyecto
+
+1.  **Análisis de Datos con PySpark:** PySpark demostró ser una herramienta eficaz para cargar, procesar y analizar el conjunto de datos de términos de búsqueda. Operaciones como `filter`, `groupBy`, `count`, y `orderBy` son intuitivas y potentes para extraer información valiosa.
+2.  **Manejo de Nombres de Columna:** Se observó que Spark, al inferir el esquema de un CSV con encabezados como "Search Term", lo convierte a un formato más manejable programáticamente como "searchterm". Es crucial verificar los nombres de columna reales en el DataFrame antes de realizar operaciones sobre ellos.
+3.  **Persistencia y Carga de Modelos (MLOps Básico):**
+    * El proceso de guardar y cargar modelos es fundamental. El notebook (aunque no mostraba el guardado de este modelo específico, sino en un ejercicio previo del laboratorio) y la carga del modelo preentrenado ilustran este concepto.
+    * La correcta identificación del **tipo de modelo guardado** (ej. `LinearRegressionModel` vs. `PipelineModel`) es esencial para una carga exitosa. Los metadatos del modelo son la fuente de esta información.
+    * La **ruta correcta** al directorio del modelo (después de la extracción de archivos comprimidos) también es un detalle crítico.
+4.  **Preparación de Datos para Inferencia:** Para utilizar un modelo cargado, los datos de entrada deben ser preprocesados exactamente de la misma manera que los datos con los que el modelo fue entrenado. En este caso, se requirió el uso de `VectorAssembler` para crear la columna `features` a partir del año.
+5.  **Utilidad de Modelos Preentrenados:** Poder cargar y utilizar modelos preentrenados ahorra un tiempo y recursos considerables, permitiendo aplicar rápidamente soluciones de ML a nuevos datos.
+
+## Aplicaciones en la Vida Real
+
+Las técnicas y procesos demostrados en este notebook tienen numerosas aplicaciones en escenarios del mundo real, especialmente en el contexto de MLOps:
+
+1.  **Optimización de Marketing y SEO:** Analizar los términos de búsqueda más frecuentes ayuda a las empresas de comercio electrónico a entender qué buscan sus clientes, optimizar sus listados de productos para motores de búsqueda (SEO), y dirigir campañas de marketing más efectivas (SEM).
+2.  **Mejora de la Experiencia del Usuario (UX):** Conocer los términos de búsqueda populares puede guiar el diseño de la navegación del sitio web, la categorización de productos y la funcionalidad de búsqueda interna para hacerla más intuitiva y eficiente.
+3.  **Gestión de Inventario y Demanda:** Identificar tendencias en las búsquedas (ej. "gaming laptop") puede ayudar a predecir la demanda de ciertos productos y optimizar los niveles de inventario.
+4.  **Pronóstico de Ventas:** El uso de modelos de pronóstico de ventas, como el cargado en el notebook, es vital para la planificación financiera, la asignación de recursos, la fijación de objetivos y la toma de decisiones estratégicas en cualquier negocio.
+5.  **Operacionalización de Modelos (MLOps):**
+    * **Automatización:** La capacidad de guardar, cargar y ejecutar modelos programáticamente es la base para automatizar pipelines de ML, donde los modelos se reentrenan y despliegan continuamente.
+    * **Escalabilidad:** PySpark permite procesar grandes volúmenes de datos para el análisis y el entrenamiento/inferencia de modelos, lo cual es crucial para aplicaciones a gran escala.
+    * **Monitoreo y Reentrenamiento:** Aunque no se implementó aquí, en un sistema MLOps completo, el rendimiento del modelo de pronóstico de ventas se monitorearía continuamente. Si su precisión disminuye (deriva del modelo), se activaría un proceso de reentrenamiento con datos más recientes.
+    * **Reproducibilidad:** Guardar modelos y versionar el código de preparación de datos y entrenamiento asegura que los resultados puedan ser reproducidos y auditados.
+
+En resumen, este proyecto, aunque básico, toca muchos puntos clave del análisis de datos moderno y las prácticas de MLOps que son esenciales para que las empresas aprovechen el poder de sus datos y modelos de Machine Learning de manera eficiente y escalable.
+
+## Cómo Ejecutar
 
 1.  **Entorno:**
-    * Este notebook está diseñado para ejecutarse en un entorno que tenga Apache Spark y PySpark instalados y configurados.
-    * Se asume un entorno tipo Jupyter Notebook o JupyterLab.
-2.  **Instalación de Dependencias:**
-    * La primera celda del notebook instala `pyspark` y `findspark` si aún no están presentes:
-        ```python
-        !pip install pyspark
-        !pip install findspark
-        ```
-3.  **Ejecución de Celdas:**
-    * Ejecuta las celdas del notebook en orden secuencial.
-    * Los archivos de datos y modelos se descargan automáticamente por el notebook en el directorio de trabajo actual.
-4.  **Ajustes Potenciales:**
-    * **Nombres de Columna:** Presta atención a los nombres de columna inferidos por Spark al cargar `searchterms.csv`. El código intenta manejar la diferencia entre "Search Term" (en el CSV) y "searchterm" (como lo carga Spark), pero podría necesitar ajustes si tu versión de Spark lo maneja diferente.
-    * **Rutas de Modelo:** La extracción del `model.tar.gz` y la carga del modelo dependen de la estructura del archivo tar. El código asume que el modelo real está en una subcarpeta llamada `sales_prediction.model` dentro del directorio donde se extrae el tar.
-
-## Conclusión
-
-Este notebook proporciona una visión práctica de cómo se pueden usar PySpark y SparkML para análisis de datos básicos y operaciones de Machine Learning, tocando aspectos fundamentales relevantes para MLOps como la persistencia, carga y utilización de modelos.
+    * Jupyter Notebook o JupyterLab con Python.
+    * Apache Spark y Java instalados y configurados.
+2.  **Instalación:**
+    * Ejecutar la primera celda del notebook para instalar `pyspark` y `findspark` si es necesario.
+3.  **Ejecución:**
+    * Ejecutar las celdas del notebook `Spark_MLOps (1).ipynb` en orden. Los archivos de datos (`searchterms.csv`) y el modelo (`model.tar.gz`) se descargan y procesan dentro del notebook.
